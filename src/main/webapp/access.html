@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Soccorso Web</title>
+  <!-- Bootswatch Cosmo (contiene già Bootstrap 5) -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cosmo/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body class="bg-light">
+<div class="container my-4">
+    <h1>SoccorsoWeb – Client di Test</h1>
+
+  <!-- FORM PUBBLICA (sempre visibile) -->
+  <div id="publicFormBox">
+    <h3>Invia Richiesta di Soccorso</h3>
+    <form id="publicRequestForm" class="mb-3" style="max-width: 500px;">
+      <input type="text" id="location" class="form-control mb-2" placeholder="Luogo" required>
+
+      <!-- Select per tipo emergenza (Bootstrap) -->
+      <select id="typeSelect" class="form-select mb-2" required>
+        <option value="" disabled selected>Seleziona tipo di emergenza</option>
+        <option value="MEDICA">MEDICA</option>
+        <option value="INCENDIO">INCENDIO</option>
+        <option value="TERREMOTO">TERREMOTO</option>
+        <option value="ALLUVIONE">ALLUVIONE</option>
+        <option value="ALTRO">ALTRO</option>
+      </select>
+
+      <button class="btn btn-success w-100">Invia Richiesta</button>
+    </form>
+    <div id="publicMsg"></div>
+    <hr>
+  </div>
+
+  <!-- LOGIN BOX -->
+  <div id="loginBox">
+    <h4>Login Operatore / Admin</h4>
+    <form id="loginForm" class="mb-3" style="max-width:400px;">
+      <input type="text" id="username" class="form-control mb-2" placeholder="Username" required>
+      <input type="password" id="password" class="form-control mb-2" placeholder="Password" required>
+      <button class="btn btn-primary w-100">Accedi</button>
+    </form>
+    <div id="loginMessage"></div>
+  </div>
+
+  <!-- APP PROTETTA -->
+  <div id="protectedAppBox" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center">
+      <h3>Console Operatore</h3>
+      <div>
+        <button class="btn btn-outline-primary me-2" id="refreshBtn">🔄 Rinnova Token</button>
+        <button class="btn btn-outline-danger" id="logoutBtn">⏻ Logout</button>
+      </div>
+    </div>
+    <hr>
+
+    <!-- FILTRO RICHIESTE -->
+    <h5>Richieste</h5>
+    <div class="d-flex mb-2" style="max-width: 400px;">
+      <select id="statusFilter" class="form-select me-2">
+        <option value="ACTIVE">Attive</option>
+        <option value="IN_PROGRESS">In Corso</option>
+        <option value="CLOSED">Chiuse</option>
+        <option value="IGNORED">Ignorate</option>
+      </select>
+      <button class="btn btn-secondary" id="loadRequestsBtn">Carica</button>
+    </div>
+    <table class="table table-bordered">
+      <thead>
+        <tr><th>ID</th><th>Tipo</th><th>Luogo</th><th>Stato</th><th>Validato</th></tr>
+      </thead>
+      <tbody id="requestsTable"></tbody>
+    </table>
+
+    <!-- OPERATORI LIBERI -->
+    <h5>Operatori Liberi</h5>
+    <ul class="list-group mb-3" id="opList"></ul>
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:8080/SoccorsoWebServices/resources";
+let token = null;
+
+// INVIO PUBBLICO DI RICHIESTA (senza login)
+$("#publicRequestForm").submit(function(e) {
+  e.preventDefault();
+  $.ajax({
+    url: `${API}/requests`,
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({
+      Type: $("#typeSelect").val(),
+      Location: $("#location").val()
+    }),
+    success: r => {
+      $("#publicRequestForm")[0].reset();
+      $("#publicMsg").html(
+        `<div class="alert alert-success">Richiesta ID ${r.id} inviata!</div>`
+      );
+    },
+    error: () => {
+      $("#publicMsg").html(
+        `<div class="alert alert-danger">Errore durante l'invio</div>`
+      );
+    }
+  });
+});
+
+// LOGIN
+$("#loginForm").submit(function(e) {
+  e.preventDefault();
+  $.ajax({
+    url: `${API}/auth/login`,
+    method: "POST",
+    data: {
+      username: $("#username").val(),
+      password: $("#password").val()
+    },
+    contentType: "application/x-www-form-urlencoded",
+    success: function(_, status, xhr) {
+      const auth = xhr.getResponseHeader("Authorization");
+      if (auth && auth.startsWith("Bearer ")) {
+        token = auth.substring(7);
+        $("#loginBox").hide();
+        $("#protectedAppBox").show();
+        loadOperators();
+        loadRequests();
+      }
+    },
+    error: () => {
+      $("#loginMessage").html(
+        `<div class="alert alert-danger">Login fallito</div>`
+      );
+    }
+  });
+});
+
+// RINNOVA TOKEN
+$("#refreshBtn").click(function() {
+  $.ajax({
+    url: `${API}/auth/refresh`,
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+    success: newToken => { token = newToken; alert("Token rinnovato!"); }
+  });
+});
+
+// LOGOUT
+$("#logoutBtn").click(function() {
+  $.ajax({
+    url: `${API}/auth/logout`,
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  }).always(() => {
+    token = null;
+    $("#protectedAppBox").hide();
+    $("#loginBox").show();
+  });
+});
+
+// CARICA RICHIESTE FILTRATE
+$("#loadRequestsBtn").click(loadRequests);
+function loadRequests() {
+    // Controlla che il cookie esista ancora, altrimenti resetta la variabile
+if (!document.cookie.includes('token=')) {
+  token = null;
+  $("#protectedAppBox").hide();
+  $("#loginBox").show();
+}
+  $.ajax({
+    url: `${API}/requests`,
+    method: "GET",
+    data: {
+      status: $("#statusFilter").val(),
+      page: 1,
+      size: 15
+    },
+    headers: { Authorization: `Bearer ${token}` },
+    success: data => {
+      $("#requestsTable").empty();
+      if (!data || data.length === 0) {
+        $("#requestsTable").append(
+          `<tr><td colspan="5" class="text-muted">Nessuna richiesta</td></tr>`
+        );
+      } else {
+        data.forEach(rq => {
+          $("#requestsTable").append(`
+            <tr>
+              <td>${rq.id}</td>
+              <td>${rq.Type}</td>
+              <td>${rq.Location}</td>
+              <td>${rq.Status}</td>
+              <td>${ rq.validated
+                ? 'VALIDATA'
+                : 'NON VALIDATA'
+              }</td>
+            </tr>`);
+        });
+      }
+    }
+  });
+}
+
+// CARICA OPERATORI LIBERI
+function loadOperators() {
+    // Controlla che il cookie esista ancora, altrimenti resetta la variabile
+if (!document.cookie.includes('token=')) {
+  token = null;
+  $("#protectedAppBox").hide();
+  $("#loginBox").show();
+}
+  $.ajax({
+    url: `${API}/operators`,
+    method: "GET",
+    data: { status: "FREE" },
+    headers: { Authorization: `Bearer ${token}` },
+    success: data => {
+      $("#opList").empty();
+      if (!data || data.length === 0) {
+        $("#opList").append(
+          `<li class="list-group-item text-muted">Nessun operatore libero</li>`
+        );
+      } else {
+        data.forEach(op => {
+          $("#opList").append(
+            `<li class="list-group-item">${op.Name} ${op.Surname}</li>`
+          );
+        });
+      }
+    }
+  });
+  
+
+
+}
+</script>
+</body>
+</html>
