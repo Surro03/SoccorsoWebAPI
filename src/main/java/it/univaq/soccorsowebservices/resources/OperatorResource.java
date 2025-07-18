@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author surro
  */
-@Logged
 @Path("/operators")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -54,6 +53,7 @@ static {
     
     //Lista generale di operatori in base allo status cercato
     @GET
+    @Logged
     public Response getListOp(@QueryParam("status") String status){
         if (status != null && !status.isBlank()) {
             List<Operator> Operators = Database.values().stream()
@@ -76,6 +76,7 @@ static {
     //Dettagli di un Operatore
     @GET
     @Path("/{id}")
+    @Logged
     public Response getOpDetails(@PathParam("id") long id){
             Operator Op = Database.get(id);
             if(Op == null){
@@ -88,7 +89,7 @@ static {
     
     //Metodo per tornare tutte le missioni a cui un operatore ha partecipato
     @GET
-    //@Logged
+    @Logged
     @Path("/{opId}/missions")
     public Response getListOpMission(@PathParam ("opId") long opId){
         Operator Op = Database.values().stream().filter(op-> op.id() == opId).findFirst()

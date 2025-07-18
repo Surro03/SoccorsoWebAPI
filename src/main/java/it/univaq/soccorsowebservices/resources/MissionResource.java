@@ -41,7 +41,7 @@ public class MissionResource {
      private static final ConcurrentHashMap<Long, Mission> Database = new ConcurrentHashMap<>();
     
         @POST
-        //@Logged
+        @Logged
         public Response Create(Mission data, @Context UriInfo uri){
             
             //Verifichiamo che la richiesta sia valida
@@ -90,7 +90,7 @@ public class MissionResource {
         }
         
         @PUT
-        //@Logged
+        @Logged
         @Path("{id}/close")
         public Response closeMission(@PathParam ("id") long id, @QueryParam("successLevel") int successLevel){
             Mission m = Database.get(id);
@@ -107,7 +107,7 @@ public class MissionResource {
         }
         
         @GET
-        //@Logged
+        @Logged
         @Path("/{id}")
         public Response getMission(@PathParam ("id") long id){
             Mission m = Database.get(id);

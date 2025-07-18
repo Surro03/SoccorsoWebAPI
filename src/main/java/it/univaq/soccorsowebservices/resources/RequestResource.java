@@ -72,7 +72,7 @@ public class RequestResource {
     
     
     @GET
-    //@Logged
+    @Logged
     @Path("/{id}")
     public Response getRequest(@PathParam("id") long id){
         Request hr = Database.get(id);
@@ -109,7 +109,7 @@ public class RequestResource {
     }
         
     @GET
-    //@Logged
+    @Logged
     public Response getStatusRequestList(
                                    @QueryParam("status") String status,
                                    @QueryParam("page") @DefaultValue("1") int page,
@@ -142,7 +142,7 @@ public class RequestResource {
     
     
     @GET
-    //@Logged
+    @Logged
     @Path("/notPositive")
     public Response getNotPositiveRequests(){
          List<Request> notPositive = Database.values().stream()
@@ -158,7 +158,7 @@ public class RequestResource {
     }
     
     @GET
-    //@Logged
+    @Logged
     @Path("{id}/validate")
     public Response validateRequest(@PathParam ("id") long id){
         Request hr = Database.get(id);
@@ -171,7 +171,7 @@ public class RequestResource {
     }
     
     @DELETE
-    //@Logged
+    @Logged
     @Path("{id}/remove")
     public Response deleteRequest(@PathParam ("id") long id, @Context SecurityContext sc){
          if (!sc.isUserInRole("admin")) {
@@ -189,7 +189,7 @@ public class RequestResource {
     }
     
     @PUT
-    //@Logged
+    @Logged
     @Path("{id}/ignore")
     public Response ignoreRequest(@PathParam ("id") long id, @Context SecurityContext sc){
          if (!sc.isUserInRole("admin")) {
