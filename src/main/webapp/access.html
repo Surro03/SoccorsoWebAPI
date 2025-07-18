@@ -154,7 +154,7 @@ $("#refreshBtn").click(function() {
 $("#logoutBtn").click(function() {
   $.ajax({
     url: `${API}/auth/logout`,
-    method: "DELETE",
+    method: "POST",
     headers: { Authorization: `Bearer ${token}` }
   }).always(() => {
     token = null;
@@ -195,7 +195,7 @@ if (!document.cookie.includes('token=')) {
               <td>${rq.Type}</td>
               <td>${rq.Location}</td>
               <td>${rq.Status}</td>
-              <td>${ rq.validated
+              <td>${ rq.Validated
                 ? 'VALIDATA'
                 : 'NON VALIDATA'
               }</td>

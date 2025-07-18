@@ -44,6 +44,10 @@ public class RequestResource {
     //simuliamo la persistenza sul DB
     private static volatile long SEQ = 1;
     private static final ConcurrentHashMap<Long, Request> Database = new ConcurrentHashMap<>();
+    static{
+        Database.put(SEQ, new Request(SEQ++, "CLOSED", 4, "INCENDIO", "Pescocostanzo", java.time.OffsetDateTime.now(), true));
+        Database.put(SEQ, new Request(SEQ++, "IGNORED", 2, "ALLUVIONE", "Roma", java.time.OffsetDateTime.now(), false));
+    }
     
     
     @POST
@@ -68,7 +72,7 @@ public class RequestResource {
     
     
     @GET
-    @Logged
+    //@Logged
     @Path("/{id}")
     public Response getRequest(@PathParam("id") long id){
         Request hr = Database.get(id);
@@ -105,7 +109,7 @@ public class RequestResource {
     }
         
     @GET
-    @Logged
+    //@Logged
     public Response getStatusRequestList(
                                    @QueryParam("status") String status,
                                    @QueryParam("page") @DefaultValue("1") int page,
@@ -138,7 +142,7 @@ public class RequestResource {
     
     
     @GET
-    @Logged
+    //@Logged
     @Path("/notPositive")
     public Response getNotPositiveRequests(){
          List<Request> notPositive = Database.values().stream()
@@ -154,7 +158,7 @@ public class RequestResource {
     }
     
     @GET
-    @Logged
+    //@Logged
     @Path("{id}/validate")
     public Response validateRequest(@PathParam ("id") long id){
         Request hr = Database.get(id);
@@ -167,7 +171,7 @@ public class RequestResource {
     }
     
     @DELETE
-    @Logged
+    //@Logged
     @Path("{id}/remove")
     public Response deleteRequest(@PathParam ("id") long id, @Context SecurityContext sc){
          if (!sc.isUserInRole("admin")) {
@@ -181,6 +185,25 @@ public class RequestResource {
             return Response.status(404).entity("no-Request-found").build();
         }
         
+        return Response.noContent().build();
+    }
+    
+    @PUT
+    //@Logged
+    @Path("{id}/ignore")
+    public Response ignoreRequest(@PathParam ("id") long id, @Context SecurityContext sc){
+         if (!sc.isUserInRole("admin")) {
+            return Response.status(Response.Status.FORBIDDEN)
+                           .entity("must-be-admin")
+                           .build();
+        }
+        
+        Request hr = Database.get(id);
+        Database.remove(hr);
+        if(hr == null){
+            return Response.status(404).entity("no-Request-found").build();
+        }
+        RequestResource.setStatus(hr.id(), "IGNORED");
         return Response.noContent().build();
     }
     

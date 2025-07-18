@@ -88,7 +88,7 @@ static {
     
     //Metodo per tornare tutte le missioni a cui un operatore ha partecipato
     @GET
-    @Logged
+    //@Logged
     @Path("/{opId}/missions")
     public Response getListOpMission(@PathParam ("opId") long opId){
         Operator Op = Database.values().stream().filter(op-> op.id() == opId).findFirst()

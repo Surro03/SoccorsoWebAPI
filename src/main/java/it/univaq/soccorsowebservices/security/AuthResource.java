@@ -63,7 +63,7 @@ public class AuthResource {
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }
 
-    @DELETE
+    @POST
     @Path("/logout")
     @Logged
     public Response logout(@Context ContainerRequestContext req) {
