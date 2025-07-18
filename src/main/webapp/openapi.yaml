@@ -12,7 +12,7 @@ info:
 
 servers:
   - url: http://localhost:8080/SoccorsoWebServices/resources
-    description: URL API
+    description: URL di sviluppo locale
 
 tags:
   - name: Authentication
@@ -390,10 +390,11 @@ paths:
                 Location: Milano
                 RequestTime: '2024-03-15 20:25:48'
                 Validated: false
-        '404':
-            description: Richiesta non trovata
         '401':
           description: Token assente o non valido
+        '404':
+            description: Richiesta non trovata
+        
 
   /requests/{id}/validate:
     get:
@@ -461,7 +462,7 @@ paths:
             type: integer
       responses:
         '204':
-          description: Richiesta eliminata con successo
+          description: Richiesta ignorata con successo
         '404':
           description: Richiesta non trovata
         '403':
@@ -745,6 +746,7 @@ paths:
                   start: '2024-12-30 12:25:48'
                   end: '2025-06-30 18:25:48'
                   successLevel: 3
-                
+        '401':
+          description: Token assente o non valido
         '404':
           description: Operatore non trovato oppure nessuna missione trovata
