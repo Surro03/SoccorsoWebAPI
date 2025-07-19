@@ -1,0 +1,752 @@
+openapi: 3.0.3
+info:
+  title: Soccorso Web API
+  version: 1.0.0
+  description: >
+    Questa API permette di gestire un sistema di soccorso in situazioni di emergenza.
+    Tutti possono inserire richieste di aiuto.
+    Gli admin e gli operatori possono autenticarsi, validarle, e monitorare
+    lo stato delle missioni create per rispondere a queste richieste. Gli admin possono anche annullare richieste, creare missioni e chiuderle valutando il successo
+    dell'intervento. Tutto è gestito in memoria per fare il test dell'API.
+    È disponibile anche un client web semplice per testare le funzionalità principali.
+
+servers:
+  - url: http://localhost:8080/SoccorsoWebServices/resources
+    description: URL di sviluppo locale
+
+tags:
+  - name: Authentication
+    description: Operazioni di login/logout dal sistema.
+  - name: HelpRequests
+    description: Gestione delle richieste di soccorso.
+  - name: Missions
+    description: Gestione delle missioni.
+  - name: Operatori
+    description: Gestione degli operatori.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: UUID
+      description: Token di autenticazione UUID da includere nell’header Authorization
+  schemas:
+    Request:
+      type: object
+      description: Rappresenta una richiesta di soccorso.
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Identificatore univoco della richiesta
+          example: 1234
+        status:
+          type: string
+          description: Stato attuale della richiesta
+          example: ACTIVE, IN_PROGRESS, CLOSED, IGNORED
+          default: ACTIVE
+        successLevel:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 10
+          description: Livello di successo associato alla gestione della richiesta
+          example: 7
+          default: null
+        type:
+          type: string
+          description: Tipo di richiesta (MEDICA, INCENDIO, TERREMOTO, ...)
+          example: "INCENDIO"
+        location:
+          type: string
+          description: Localizzazione dell'evento
+          example: "Via Verdi 12, Roma"
+        requestTime:
+          type: string
+          format: date-time
+          description: Data e ora in cui la richiesta è stata registrata
+          example: "2025-07-18 20:25:48"
+        validated:
+          type: boolean
+          description: Indica se la richiesta è stata validata da un operatore
+          example: false
+          default: false
+      required:
+        - type
+        - location
+          
+    Operator:
+      type: object
+      description: Rappresenta un operatore del sistema
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Giulia"
+        surname:
+          type: string
+          example: "Rossi"
+        status:
+          type: string
+          description: Stato dell'operatore (se disponibile o impegnato)
+          example: FREE, BUSY
+      required:
+        - id
+        - name
+        - surname
+        - status
+
+    Mission:
+      type: object
+      description: Rappresenta una missione associata a una richiesta di soccorso.
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Identificatore univoco della missione
+          example: 101
+        requestId:
+          type: integer
+          format: int64
+          description: ID della richiesta di soccorso associata
+          example: 5
+        status:
+          type: string
+          description: Stato corrente della missione
+          example: CLOSED, IN_PROGRESS
+          default: IN_PROGRESS
+        operatorIds:
+          type: array
+          description: Elenco degli ID degli operatori assegnati
+          items:
+            type: integer
+            format: int64
+          example: [1, 2, 3]
+        start:
+          type: string
+          format: date-time
+          description: Data e ora di inizio della missione
+          example: "2025-06-30 12:25:48"
+        end:
+          type: string
+          format: date-time
+          description: Data e ora di fine della missione (può essere null se non conclusa)
+          nullable: true
+          example: "2025-06-30 18:25:48"
+        successLevel:
+          type: integer
+          description: Livello di successo della missione (0=fallimento, 10=massimo)
+          minimum: 0
+          maximum: 10
+          nullable: true
+          example: 6
+          default: null
+      required:
+        - requestId
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: adminpass
+      required:
+        - username
+        - password
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Effettua il login per ottenere un token
+      description: |
+        Riceve username e password via `application/x-www-form-urlencoded`.
+        Se le credenziali sono corrette, restituisce un token di autenticazione:
+        - nel body (plain text)
+        - nell’header `Authorization: Bearer <token>`
+        - nel cookie `token=<uuid>`
+        Il ruolo dell'utente viene recuperato dal db fittizio e messo nel ContainerRequestContext.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest' 
+      responses:
+        '200':
+          description: Login riuscito, token generato
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+          headers:
+            Authorization:
+              description: Token da usare per autenticazione Bearer
+              schema:
+                type: string
+                example: Bearer 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            Set-Cookie:
+              description: Cookie `token` impostato
+              schema:
+                type: string
+                example: token=3fa85f64-5717-4562-b3fc-2c963f66afa6; Path=/
+        '401':
+          description: Credenziali errate
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Effettua il logout
+      description: |
+        Invalida il token corrente e cancella il cookie `token`.
+        Richiede il token in formato Bearer (header `Authorization`) o cookie.
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Logout riuscito, nessun contenuto
+          headers:
+            Set-Cookie:
+              description: Cookie `token` eliminato (Max-Age=0)
+              schema:
+                type: string
+                example: token=; Path=/; Max-Age=0
+        '401':
+          description: Token assente o non valido
+
+  /auth/refresh:
+    get:
+      tags:
+        - Authentication
+      summary: Rigenera il token di sessione
+      description: |
+        Invalida il token attuale e ne genera uno nuovo.
+        Il nuovo token è restituito:
+        - nel body
+        - nell’header `Authorization`
+        - nel cookie `token`
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Nuovo token generato con successo
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 601b2d3f-0e4e-4c45-a8e7-4b9f2cd0cf14
+          headers:
+            Authorization:
+              description: Bearer token aggiornato
+              schema:
+                type: string
+                example: Bearer 601b2d3f-0e4e-4c45-a8e7-4b9f2cd0cf14
+            Set-Cookie:
+              description: Nuovo cookie `token`
+              schema:
+                type: string
+                example: token=601b2d3f-0e4e-4c45-a8e7-4b9f2cd0cf14; Path=/
+        '401':
+          description: Token mancante o non valido
+
+  /requests:
+    post:
+      tags:
+        - HelpRequests
+      summary: Crea una nuova richiesta di soccorso
+      description: |
+        Crea una nuova richiesta di soccorso con stato iniziale `ACTIVE`.
+        Non richiede autenticazione.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+            example:
+              Type: "INCENDIO"
+              Location: "Via Verdi 12, Roma"
+      responses:
+        '201':
+          description: Richiesta creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+              example:
+                id: 1234
+                status: ACTIVE
+                successLevel: 7
+                type: MEDICA
+                location: Roma
+                requestTime: '2025-07-18 20:25:48'
+                validated: false
+              
+        '400':
+          description: Dati non validi
+          
+    get:
+      tags:
+        - HelpRequests
+      summary: Elenco richieste filtrate per stato passato tramite parametro query (paginato)
+      description: |
+        Restituisce l'elenco delle richieste di soccorso con stato specificato.
+        Richiede autenticazione. I risultati sono paginati. Non da 404 perché verrà semplicemente fornito un array vuoto.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            type: string
+            example: ACTIVE, IN_PROGRESS, CLOSED
+          description: Stato della richiesta da filtrare (es. ACTIVE, CLOSED, ecc.)
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Numero della pagina (da 1 in poi)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 15
+          description: Numero massimo di risultati per pagina
+      responses:
+        '200':
+          description: Elenco richieste restituito con successo
+          headers:
+            X-Total-Count:
+              description: Numero totale di richieste che soddisfano il filtro
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Request'
+                example:
+                    - id: 1
+                      status: CLOSED
+                      successLevel: 4
+                      type: INCENDIO
+                      location: Pescocostanzo
+                      requestTime: "2024-06-30 18:25:48"
+                      validated: true
+                    - id: 2
+                      status: IN_PROGRESS
+                      successLevel: null
+                      type: ALLUVIONE
+                      location: Sulmona
+                      requestTime: "2025-06-30 18:25:48"
+                      validated: true
+        '400':
+          description: Parametri non validi
+        '401':
+          description: Token non fornito o non valido
+
+  /requests/{id}:
+    get:
+      tags:
+        - HelpRequests
+      summary: Ottieni una richiesta per ID
+      description: Restituisce i dettagli della richiesta specificata. Richiede autenticazione.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Richiesta trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+              example:
+                id: 1
+                Status: IGNORED
+                SuccessLevel: null
+                Type: POLIZIA
+                Location: Milano
+                RequestTime: '2024-03-15 20:25:48'
+                Validated: false
+        '401':
+          description: Token assente o non valido
+        '404':
+            description: Richiesta non trovata
+        
+
+  /requests/{id}/validate:
+    get:
+      tags:
+        - HelpRequests
+      summary: Valida una richiesta di soccorso
+      description: |
+        Convalida una richiesta (se non già validata).
+        Richiede autenticazione.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Richiesta validata con successo
+        '404':
+          description: Richiesta non trovata o già validata
+        '401':
+          description: Token non valido
+
+  /requests/{id}/remove:
+    delete:
+      tags:
+        - HelpRequests
+      summary: Elimina una richiesta di soccorso
+      description: |
+        Rimuove la richiesta se esiste. Richiede ruolo admin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Richiesta eliminata con successo
+        '404':
+          description: Richiesta non trovata
+        '403':
+          description: Operazione consentita solo ad admin
+        '401':
+          description: Token non valido
+          
+  /requests/{id}/ignore:
+    put:
+      tags:
+          - HelpRequests
+      summary: Ignora una richiesta di soccorso
+      description: | 
+       Se ad esempio una richiesta di soccorso viene giudicata falsa può non essere validata e ignorata. Richiede ruolo *admin*.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Richiesta ignorata con successo
+        '404':
+          description: Richiesta non trovata
+        '403':
+          description: Operazione consentita solo ad admin
+        '401':
+          description: Token non valido
+    
+  /requests/notPositive:
+    get:
+      tags:
+        - HelpRequests
+      summary: Ottieni richieste con successo ≤ 5
+      description: |
+        Restituisce tutte le richieste con successo basso (≤5).
+        Richiede autenticazione.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Richieste trovate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Request'
+                example:
+                    - id: 4
+                      status: CLOSED
+                      successLevel: 4
+                      type: INCENDIO
+                      location: Pescocostanzo
+                      requestTime: "2024-12-30 18:25:48"
+                      validated: true
+                    - id: 5
+                      status: CLOSED
+                      successLevel: 2
+                      type: ALLUVIONE
+                      location: Tocco da Casauria
+                      requestTime: "2025-12-13 18:25:48"
+                      validated: true
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Nessuna richiesta con successo basso trovata
+
+
+  /missions:
+    post:
+      tags:
+        - Missions
+      summary: Crea una nuova missione
+      description: |
+        Crea una missione a partire da una richiesta validata con stato `ACTIVE`.
+        Associa automaticamente tutti gli operatori liberi alla missione. Solo gli utenti autenticati possono fare questa operazione.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mission'
+            example:
+              RequestId: 5
+      responses:
+        '201':
+          description: Missione creata con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+              example:
+                id: 101
+                requestId: 5
+                status: CLOSED
+                operatorIds:
+                  - 1
+                  - 2
+                  - 3
+                start: '2025-06-30 12:25:48'
+                end: '2025-06-30 18:25:48'
+                successLevel: 6
+        '400':
+          description: Richiesta non valida o non validata
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Richiesta non trovata o nessun operatore libero
+
+  /missions/{id}/close:
+    put:
+      tags:
+        - Missions
+      summary: Chiude una missione esistente
+      description: |
+        Chiude una missione aperta, marcandola come `CLOSED` e assegnandole un livello di successo.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: successLevel
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 10
+      responses:
+        '204':
+          description: Missione chiusa correttamente
+        '400':
+          description: Missione già chiusa
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Missione non trovata
+
+  /missions/{id}:
+    get:
+      tags:
+        - Missions
+      summary: Recupera una missione per ID
+      description: Restituisce i dettagli completi di una missione esistente.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Missione trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mission'
+              example:
+                id: 101
+                requestId: 5
+                status: IN_PROGRESS
+                operatorIds:
+                  - 5
+                  - 101
+                  - 45
+                start: '2023-06-30 12:25:48'
+                end: null
+                successLevel: null
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Missione non trovata
+
+  /operators:
+    get:
+      tags:
+        - Operatori
+      summary: Elenco operatori con filtro per stato
+      description: |
+        Restituisce gli operatori filtrati per stato (es. `FREE`, `OCCUPIED`).
+        Il parametro `status` è obbligatorio.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            type: string
+            example: FREE
+      responses:
+        '200':
+          description: Elenco operatori restituito con successo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Operator'
+                example:
+                - id: 1
+                  name: Giulia
+                  surname: Rossi
+                  status: FREE
+                  
+                - id: 2
+                  name: Dario
+                  surname: Moccia
+                  status: BUSY
+                  
+        '400':
+          description: Parametro `status` mancante o non valido
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Nessun operatore trovato con quello stato
+
+  /operators/{id}:
+    get:
+      tags:
+        - Operatori
+      summary: Dettagli di un operatore
+      description: | 
+       Restituisce i dettagli dell'operatore specificato per `id` .
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Operatore trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operator'
+              example:
+                - id: 13
+                  name: Massimo
+                  surname: Neri
+                  status: FREE
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Operatore non trovato
+
+  /operators/{opId}/missions:
+    get:
+      tags:
+        - Operatori
+      summary: Missioni assegnate a un operatore
+      description: |
+        Restituisce tutte le missioni a cui l’operatore specificato ha partecipato.
+        Richiede autenticazione.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: opId
+          example: 4
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Elenco missioni trovate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Mission'
+                example:
+                - id: 101
+                  requestId: 5
+                  status: CLOSED
+                  operatorIds:
+                    - 1
+                    - 4
+                    - 3
+                  start: '2025-06-30 12:25:48'
+                  end: '2025-06-30 18:25:48'
+                  successLevel: 7
+                
+                - id: 37
+                  requestId: 5
+                  status: CLOSED
+                  operatorIds:
+                    - 15
+                    - 4
+                    - 24
+                  start: '2024-12-30 12:25:48'
+                  end: '2025-06-30 18:25:48'
+                  successLevel: 3
+        '401':
+          description: Token assente o non valido
+        '404':
+          description: Operatore non trovato oppure nessuna missione trovata

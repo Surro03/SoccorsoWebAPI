@@ -1,0 +1,16 @@
+it/univaq/soccorsowebservices/dto/Mission.class
+it/univaq/soccorsowebservices/security/AuthMap.class
+it/univaq/soccorsowebservices/SoccorsoWebApplication.class
+it/univaq/soccorsowebservices/security/LoggedFilt$1.class
+it/univaq/soccorsowebservices/entities/UserEntity.class
+it/univaq/soccorsowebservices/dto/Operator.class
+it/univaq/soccorsowebservices/resources/MissionResource.class
+it/univaq/soccorsowebservices/entities/RequestEntity.class
+it/univaq/soccorsowebservices/security/LoggedFilt.class
+it/univaq/soccorsowebservices/resources/JakartaEE10Resource.class
+it/univaq/soccorsowebservices/dto/Request.class
+it/univaq/soccorsowebservices/security/AuthResource.class
+it/univaq/soccorsowebservices/resources/RequestResource.class
+it/univaq/soccorsowebservices/jackson/ObjectMapperContextResolver.class
+it/univaq/soccorsowebservices/security/Logged.class
+it/univaq/soccorsowebservices/resources/OperatorResource.class

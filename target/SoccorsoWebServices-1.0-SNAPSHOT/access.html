@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Login</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+</head>
+<body>
+    <h2>Login</h2>
+    <form id="loginForm">
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" required><br><br>
+
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" required><br><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div id="output" style="margin-top: 20px;"></div>
+
+    <script>
+        const BASE_URL = "http://localhost:8080/SoccorsoWebAPI/resources";
+
+        $("#loginForm").submit(function(e) {
+            e.preventDefault();
+            const username = $("#username").val();
+            const password = $("#password").val();
+
+            $.ajax({
+                url: BASE_URL + "/auth/login",
+                method: "POST",
+                data: {
+                    username: username,
+                    password: password
+                },
+                xhrFields: {
+                    withCredentials: true // se vuoi gestire i cookie lato client
+                },
+                success: function(response, status, xhr) {
+                    const authHeader = xhr.getResponseHeader("Authorization");
+                    const token = response;
+
+                    $("#output").html(`
+                        <p style="color:green;">Login riuscito!</p>
+                        <p><strong>Token:</strong> ${token}</p>
+                        <p><strong>Authorization header:</strong> ${authHeader}</p>
+                    `);
+
+                    // Salvo il token localmente per eventuali usi futuri
+                    localStorage.setItem("authToken", token);
+                },
+                error: function(xhr) {
+                    $("#output").html(`<p style="color:red;">Errore di login (${xhr.status})</p>`);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

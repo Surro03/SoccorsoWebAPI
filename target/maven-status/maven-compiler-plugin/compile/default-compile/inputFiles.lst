@@ -1,0 +1,15 @@
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/resources/MissionResource.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/entities/RequestEntity.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/entities/UserEntity.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/dto/Operator.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/dto/Mission.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/jackson/ObjectMapperContextResolver.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/SoccorsoWebApplication.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/security/LoggedFilt.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/security/AuthResource.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/security/Logged.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/dto/Request.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/resources/OperatorResource.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/security/AuthMap.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/resources/RequestResource.java
+/Users/surro/SoccorsoWebServices/src/main/java/it/univaq/soccorsowebservices/resources/JakartaEE10Resource.java

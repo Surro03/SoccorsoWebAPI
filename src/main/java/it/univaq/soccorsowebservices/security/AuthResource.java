@@ -73,10 +73,10 @@ public class AuthResource {
 
         return Response.noContent()
                 .cookie(new NewCookie.Builder("token")
-                            .value("")
-                            .path("/")
-                            .maxAge(0)      
-                            .build())
+                                     .value("")
+                                     .path("/")
+                                     .maxAge(0)      
+                                     .build())
                 .build();
     }
      //Metodo per fare "refresh" del token senza ritrasmettere le credenziali

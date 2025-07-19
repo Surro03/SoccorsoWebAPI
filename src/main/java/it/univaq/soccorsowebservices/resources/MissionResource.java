@@ -100,6 +100,9 @@ public class MissionResource {
             if(m.Status().equalsIgnoreCase("CLOSED")){
                 return Response.status(Response.Status.BAD_REQUEST).entity("Mission-already-closed").build();
             }
+            if(successLevel<0 || successLevel>10){
+                return Response.status(Response.Status.BAD_REQUEST).entity("successLevel-must-be-between-1-and-10").build();
+            }
             Database.remove(id);
             Mission cm = new Mission(m.Id(), m.RequestId(), "CLOSED", m.OperatorIds(), m.start(), java.time.OffsetDateTime.now(), successLevel);
             Database.put(cm.Id(), cm);
