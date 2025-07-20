@@ -40,5 +40,4 @@ public class ObjectMapperContextResolver implements ContextResolver<ObjectMapper
 
     }
 }
-    
 

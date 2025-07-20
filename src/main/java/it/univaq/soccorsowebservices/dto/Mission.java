@@ -18,7 +18,8 @@ public record Mission(
         Long RequestId,
         String Status,   //CLOSED, IN_PROGRESS
         List<Long> OperatorIds,
-        @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd HH:mm:ss")
+        @JsonFormat(shape = JsonFormat.Shape.STRING,
+                    pattern = "yyyy-MM-dd HH:mm:ss")
         OffsetDateTime start,
         
         @JsonFormat(shape = JsonFormat.Shape.STRING,pattern = "yyyy-MM-dd HH:mm:ss")

@@ -55,19 +55,19 @@ public class MissionResource {
             
             //Recuperiamo gli operatori liberi
             List<Operator> Operators = OperatorResource.getAllOp();
-            List<Operator> freeOps = Operators.stream().
-                                     filter(op -> op.Status().equalsIgnoreCase("FREE"))
+            List<Operator> freeOps = Operators.stream()
+                                     .filter(op -> op.Status().equalsIgnoreCase("FREE"))
                                      .collect(Collectors.toList());
             if (freeOps.isEmpty()){
                 return Response.status(404).entity("no-free-Operators").build();
             }
             
-            long id = SEQ++;
             List<Long> freeOpIds = freeOps.stream()
                                            .map(Operator::id)
                                            .collect(Collectors.toList());
             
             //Creiamo la missione e salviamola sul DB fittizio
+            long id = SEQ++;
             Mission m = new Mission(
                 id,
                 data.RequestId(),
@@ -85,6 +85,7 @@ public class MissionResource {
             
             //Aggiorniamo lo stato degli operatori
             freeOps.forEach(op -> OperatorResource.setStatus(op.id(), "OCCUPIED"));
+            
             URI location = uri.getAbsolutePathBuilder().path(String.valueOf(id)).build();
             return Response.created(location).entity(m).build();
         }
@@ -103,9 +104,13 @@ public class MissionResource {
             if(successLevel<0 || successLevel>10){
                 return Response.status(Response.Status.BAD_REQUEST).entity("successLevel-must-be-between-1-and-10").build();
             }
-            Database.remove(id);
+            List<Long> freeOpIds = m.OperatorIds();
+            
+            
             Mission cm = new Mission(m.Id(), m.RequestId(), "CLOSED", m.OperatorIds(), m.start(), java.time.OffsetDateTime.now(), successLevel);
+            Database.remove(id);
             Database.put(cm.Id(), cm);
+            
             return Response.noContent().build();
         }
         

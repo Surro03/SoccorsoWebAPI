@@ -3,24 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <title>Soccorso Web</title>
-  
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cosmo/bootstrap.min.css"
-    rel="stylesheet"
-  >
+  <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cosmo/bootstrap.min.css" rel="stylesheet">
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body class="bg-light">
 <div class="container my-4">
-    <h1>SoccorsoWeb – Client di Test</h1>
+  <h1>SoccorsoWeb – Client di Test</h1>
 
   <!-- FORM PUBBLICA (sempre visibile) -->
   <div id="publicFormBox">
     <h3>Invia Richiesta di Soccorso</h3>
     <form id="publicRequestForm" class="mb-3" style="max-width: 500px;">
       <input type="text" id="location" class="form-control mb-2" placeholder="Luogo" required>
-
-      <!-- Select per tipo emergenza (Bootstrap) -->
       <select id="typeSelect" class="form-select mb-2" required>
         <option value="" disabled selected>Seleziona tipo di emergenza</option>
         <option value="MEDICA">MEDICA</option>
@@ -29,7 +23,6 @@
         <option value="ALLUVIONE">ALLUVIONE</option>
         <option value="ALTRO">ALTRO</option>
       </select>
-
       <button class="btn btn-success w-100">Invia Richiesta</button>
     </form>
     <div id="publicMsg"></div>
@@ -52,7 +45,7 @@
     <div class="d-flex justify-content-between align-items-center">
       <h3>Console Utente</h3>
       <div>
-        <button class="btn btn-outline-primary me-2" id="refreshBtn"> Rinnova Token</button>
+        <button class="btn btn-outline-primary me-2" id="refreshBtn">Rinnova Token</button>
         <button class="btn btn-outline-danger" id="logoutBtn">⏻ Logout</button>
       </div>
     </div>
@@ -69,12 +62,19 @@
       </select>
       <button class="btn btn-secondary" id="loadRequestsBtn">Carica</button>
     </div>
+
     <table class="table table-bordered">
       <thead>
         <tr><th>ID</th><th>Tipo</th><th>Luogo</th><th>Stato</th><th>Validato</th></tr>
       </thead>
       <tbody id="requestsTable"></tbody>
     </table>
+
+    <div class="pagination mb-4">
+      <button id="prevPage" class="btn btn-outline-secondary me-2">« Precedente</button>
+      <span id="pageIndicator">Pagina 1</span>
+      <button id="nextPage" class="btn btn-outline-secondary ms-2">Successiva »</button>
+    </div>
 
     <!-- OPERATORI LIBERI -->
     <h5>Operatori Liberi</h5>
@@ -85,8 +85,11 @@
 <script>
 const API = "http://localhost:8080/SoccorsoWebServices/resources";
 let token = null;
+let currentPage = 1;
+let lastPage = false;
+let pageSize = 15;
 
-// INVIO PUBBLICO DI RICHIESTA (senza login)
+// INVIO PUBBLICO DI RICHIESTA
 $("#publicRequestForm").submit(function(e) {
   e.preventDefault();
   $.ajax({
@@ -99,14 +102,10 @@ $("#publicRequestForm").submit(function(e) {
     }),
     success: r => {
       $("#publicRequestForm")[0].reset();
-      $("#publicMsg").html(
-        `<div class="alert alert-success">Richiesta ID ${r.id} inviata!</div>`
-      );
+      $("#publicMsg").html(`<div class="alert alert-success">Richiesta ID ${r.id} inviata!</div>`);
     },
     error: () => {
-      $("#publicMsg").html(
-        `<div class="alert alert-danger">Errore durante l'invio</div>`
-      );
+      $("#publicMsg").html(`<div class="alert alert-danger">Errore durante l'invio</div>`);
     }
   });
 });
@@ -133,9 +132,7 @@ $("#loginForm").submit(function(e) {
       }
     },
     error: () => {
-      $("#loginMessage").html(
-        `<div class="alert alert-danger">Login fallito</div>`
-      );
+      $("#loginMessage").html(`<div class="alert alert-danger">Login fallito</div>`);
     }
   });
 });
@@ -163,30 +160,30 @@ $("#logoutBtn").click(function() {
   });
 });
 
-// CARICA RICHIESTE FILTRATE
-$("#loadRequestsBtn").click(loadRequests);
-function loadRequests() {
-    // Controlla che il cookie esista ancora, altrimenti resetta la variabile
-if (!document.cookie.includes('token=')) {
-  token = null;
-  $("#protectedAppBox").hide();
-  $("#loginBox").show();
-}
+// CARICA RICHIESTE CON PAGINAZIONE
+$("#loadRequestsBtn").click(() => loadRequests());
+
+function loadRequests(page = 1) {
+  currentPage = page;
   $.ajax({
     url: `${API}/requests`,
     method: "GET",
     data: {
       status: $("#statusFilter").val(),
-      page: 1,
+      page: page,
       size: 15
     },
     headers: { Authorization: `Bearer ${token}` },
-    success: data => {
+    success: function(data, statusText, xhr) {
+      const totalCount = parseInt(xhr.getResponseHeader("X-Total-Count")) || 0;
+      const totalPages = Math.ceil(totalCount / pageSize);
+      lastPage = (currentPage >= totalPages);
+
+      $("#pageIndicator").text(`Pagina ${currentPage}`);
       $("#requestsTable").empty();
+
       if (!data || data.length === 0) {
-        $("#requestsTable").append(
-          `<tr><td colspan="5" class="text-muted">Nessuna richiesta</td></tr>`
-        );
+        $("#requestsTable").append(`<tr><td colspan="5" class="text-muted">Nessuna richiesta</td></tr>`);
       } else {
         data.forEach(rq => {
           $("#requestsTable").append(`
@@ -195,25 +192,31 @@ if (!document.cookie.includes('token=')) {
               <td>${rq.Type}</td>
               <td>${rq.Location}</td>
               <td>${rq.Status}</td>
-              <td>${ rq.Validated
-                ? 'VALIDATA'
-                : 'NON VALIDATA'
-              }</td>
+              <td>${rq.Validated ? 'VALIDATA' : 'NON VALIDATA'}</td>
             </tr>`);
         });
       }
+
+      $("#prevPage").prop("disabled", currentPage === 1);
+      $("#nextPage").prop("disabled", lastPage);
+    },
+    error: function(xhr) {
+      alert("Errore durante il caricamento: " + xhr.responseText);
     }
   });
 }
 
+// Navigazione tra pagine
+$("#prevPage").on("click", () => {
+  if (currentPage > 1) loadRequests(currentPage - 1);
+});
+
+$("#nextPage").on("click", () => {
+  if (!lastPage) loadRequests(currentPage + 1);
+});
+
 // CARICA OPERATORI LIBERI
 function loadOperators() {
-    // Controlla che il cookie esista ancora, altrimenti resetta la variabile
-if (!document.cookie.includes('token=')) {
-  token = null;
-  $("#protectedAppBox").hide();
-  $("#loginBox").show();
-}
   $.ajax({
     url: `${API}/operators`,
     method: "GET",
@@ -222,21 +225,14 @@ if (!document.cookie.includes('token=')) {
     success: data => {
       $("#opList").empty();
       if (!data || data.length === 0) {
-        $("#opList").append(
-          `<li class="list-group-item text-muted">Nessun operatore libero</li>`
-        );
+        $("#opList").append(`<li class="list-group-item text-muted">Nessun operatore libero</li>`);
       } else {
         data.forEach(op => {
-          $("#opList").append(
-            `<li class="list-group-item">${op.Name} ${op.Surname}</li>`
-          );
+          $("#opList").append(`<li class="list-group-item">${op.Name} ${op.Surname}</li>`);
         });
       }
     }
   });
-  
-
-
 }
 </script>
 </body>

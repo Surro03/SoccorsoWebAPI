@@ -38,8 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Consumes(MediaType.APPLICATION_JSON)
 public class OperatorResource {
     
-    //simuliamo la persistenza sul DB
-  private static volatile long SEQ = 1;
+//simuliamo la persistenza sul DB
+private static volatile long SEQ = 1;
 private static final ConcurrentHashMap<Long, Operator> Database 
     = new ConcurrentHashMap<>();
 

@@ -25,7 +25,7 @@ import java.util.UUID;
 
 /**
  *
- * @author didattica
+ * @author surro
  */
 @Path("/auth")
 public class AuthResource {
@@ -79,7 +79,7 @@ public class AuthResource {
                                      .build())
                 .build();
     }
-     //Metodo per fare "refresh" del token senza ritrasmettere le credenziali
+    //Metodo per fare "refresh" del token senza ritrasmettere le credenziali
     @GET
     @Path("/refresh")
     @Logged
@@ -89,11 +89,12 @@ public class AuthResource {
         String username = (String) req.getProperty("username");
         AuthMap.removeToken(token);
         String newtoken = UUID.randomUUID().toString();
-                AuthMap.saveToken(newtoken, username);
+        AuthMap.saveToken(newtoken, username);
         return Response.ok(newtoken)
                        .cookie(new NewCookie.Builder("token").value(newtoken)
-                                .path("/").build())
-                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + newtoken).build();  
+                                                             .path("/")
+                                                             .build())
+                       .header(HttpHeaders.AUTHORIZATION, "Bearer " + newtoken).build();  
     }
     
 }

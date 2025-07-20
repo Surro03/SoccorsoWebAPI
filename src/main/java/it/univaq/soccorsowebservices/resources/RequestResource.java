@@ -158,6 +158,7 @@ public class RequestResource {
     }
     
     @GET
+    //@PUT
     @Logged
     @Path("{id}/validate")
     public Response validateRequest(@PathParam ("id") long id){
@@ -199,7 +200,6 @@ public class RequestResource {
         }
         
         Request hr = Database.get(id);
-        Database.remove(hr);
         if(hr == null){
             return Response.status(404).entity("no-Request-found").build();
         }
