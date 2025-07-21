@@ -105,7 +105,10 @@ public class MissionResource {
                 return Response.status(Response.Status.BAD_REQUEST).entity("successLevel-must-be-between-1-and-10").build();
             }
             List<Long> freeOpIds = m.OperatorIds();
-            
+            for (Long opId : freeOpIds) {
+                OperatorResource.setStatus(opId, "FREE"); 
+            }
+            RequestResource.setStatus(m.RequestId(), "CLOSED");
             
             Mission cm = new Mission(m.Id(), m.RequestId(), "CLOSED", m.OperatorIds(), m.start(), java.time.OffsetDateTime.now(), successLevel);
             Database.remove(id);
